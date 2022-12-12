@@ -29,9 +29,10 @@ const scene = new Scene(engine);
 // Default Environment
 
 //vytoření kamery v pozici -5 (dozadu)
+
 const camera = new DeviceOrientationCamera(
   "kamera",
-  new Vector3(1, 1, 10),
+  new Vector3(201, 90, 90),
   scene
 );
 
@@ -41,7 +42,20 @@ camera.setTarget(new Vector3(0, 1, 0));
 //spojení kamery a grafikcého okna
 camera.attachControl(canvas, true);
 
-//zde přídáme cyklus for
+var i = 0;
+for (i = 0; i < 3; i++) {
+  var sphere = MeshBuilder.CreateCylinder(
+    "freza",
+    //{ diameter: 0.0000001, height: 3 },
+    scene
+  );
+  sphere.position.x = i;
+  if (i === 2) {
+    var Mat = new StandardMaterial("sedy", scene);
+    Mat.diffuseColor = new Color3(1, 1, 0.6);
+    sphere.material = Mat;
+  }
+}
 
 //světlo
 const light1 = new DirectionalLight(
@@ -50,20 +64,64 @@ const light1 = new DirectionalLight(
   scene
 );
 
-var freza;
-SceneLoader.ImportMesh("", "public/", "endmill.glb", scene, function (
-  newMeshes
-) {
-  // Pozice, měřítko a rotace
-  newMeshes[0].scaling = new Vector3(0.15, 0.15, 0.175);
-  newMeshes[0].rotate(new Vector3(-1, 0, 0), Math.PI / 2);
-  newMeshes[0].position.z = -2;
-  newMeshes[0].position.x = 1;
-  freza = newMeshes[0];
+var Mjolnir = sphere;
+
+SceneLoader.ImportMesh(
+  "",
+  "public/",
+  "Mjolnir_step.objjjjjjj.glb",
+  scene,
+  function (newMeshes) {
+    // Set the target of the camera to the first imported mesh
+    newMeshes[0].scaling = new Vector3(0.15, 0.15, 0.175);
+    newMeshes[0].rotate(new Vector3(-1, 0, 0), Math.PI / 2);
+    newMeshes[0].position.z = -2;
+    newMeshes[0].position.x = 1;
+    newMeshes[0].position.y = -10;
+    Mjolnir = newMeshes[0];
+  }
+);
+
+//před vykreslením se vždy provede
+scene.registerBeforeRender(function () {
+  //sphere.position.x += 0.03;
+  light1.setDirectionToTarget(sphere.position);
+
+  //pohyb
+  Mjolnir.position.x += 0.0001;
+  Mjolnir.rotate(new Vector3(0, 0, 1), (Mjolnir.rotation.y += 1));
 });
 
-scene.registerBeforeRender(function () {});
-//zde uděláme animaci
+const frameRate = 10;
+const xSlide = new Animation(
+  "xSlide",
+  "position.x",
+  frameRate,
+  Animation.ANIMATIONTYPE_FLOAT,
+  Animation.ANIMATIONLOOPMODE_CYCLE
+);
+
+const keyFrames = [];
+
+keyFrames.push({
+  frame: 0,
+  value: 2
+});
+
+keyFrames.push({
+  frame: frameRate,
+  value: -2
+});
+
+keyFrames.push({
+  frame: 2 * frameRate,
+  value: 2
+});
+xSlide.setKeys(keyFrames);
+
+Mjolnir.animations.push(xSlide);
+
+scene.beginAnimation(Mjolnir, 0, 2 * frameRate, true);
 
 // povinné vykreslování
 engine.runRenderLoop(function () {
@@ -72,6 +130,12 @@ engine.runRenderLoop(function () {
 const environment1 = scene.createDefaultEnvironment({
   enableGroundShadow: true
 });
-// zde uděláme VR prostředí
+const xrHelper = scene.createDefaultXRExperienceAsync({
+  // define floor meshes
+  floorMeshes: [environment1.ground]
+});
+//environment1.setMainColor(new Color3.FromHexString("#74b9ff"));
+environment1.ground.parent.position.y = 0;
+environment1.ground.position.y = 0;
 
 //scene.debugLayer.show();
